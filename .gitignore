@@ -1,0 +1,34 @@
+# Secret files
+.env
+Backend/.env
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Local databases
+my_project.db
+*.db
+
+# ChromaDB local vector storage
+chroma_db1/
+chroma_store/
+Backend/chroma_db1/
+Backend/chroma_store/
+
+# Streamlit local config/cache
+.streamlit/secrets.toml
+
+# VS Code local settings
+.vscode/
+
+# OS files
+.DS_Store
+Thumbs.db
