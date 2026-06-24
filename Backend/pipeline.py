@@ -15,7 +15,6 @@ def run_curator_for_user(user: User, db: Session) -> dict:
     """
 
     # Import inside the function to avoid circular import issues.
-    # These functions
     from main import fetch_stories_now, embed_new_stories, embed_user_interests
 
     # Step 1: Fetch new stories from user's saved sources.
@@ -28,10 +27,22 @@ def run_curator_for_user(user: User, db: Session) -> dict:
     interest_embedding_result = embed_user_interests(current_user=user, db=db)
 
     # Step 4: Build and save personalised digest.
-    digest_result = build_digest_for_user(user=user, db=db, top_k=5)
+    try:
+        digest_result = build_digest_for_user(user=user, db=db, top_k=5)
+
+    except ValueError as error:
+        # This prevents the whole pipeline from failing when:
+        # - all stories are duplicates
+        # - no story matches ranking rules
+        # - digest builder cannot select a story
+        digest_result = {
+            "story_count": 0,
+            "message": str(error),
+            "status": "no_digest_created"
+        }
 
     return {
-        "message": "Curator pipeline completed successfully",
+        "message": "Curator pipeline completed",
         "fetch_result": fetch_result,
         "story_embedding_result": story_embedding_result,
         "interest_embedding_result": interest_embedding_result,

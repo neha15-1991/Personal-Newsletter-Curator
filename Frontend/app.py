@@ -1,13 +1,15 @@
 import requests
 import streamlit as st
 from html import escape
+import os
 
 
 # ---------------------------------------------------------
 # BACKEND API URL
 # ---------------------------------------------------------
-# FastAPI backend should be running on this address.
-API_URL = "http://127.0.0.1:8000"
+# Locally it will use localhost.
+# On Render, it will use API_URL from Environment Variables.
+API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 
 
 # ---------------------------------------------------------
@@ -963,10 +965,8 @@ with tab2:
             st.error("Please enter a source value.")
 
         else:
-            response = add_source(
-                source_type,
-                source_value
-            )
+            with st.spinner("Adding source..."):
+                response = add_source(source_type, source_value)
 
             if response is not None and response.status_code in [200, 201]:
                 st.success("Source added successfully.")
@@ -983,13 +983,27 @@ with tab2:
 
         if len(sources) > 0:
             for source in sources:
-                st.write(
-                    f"**{source.get('source_type')}** — "
-                    f"{source.get('source_value')}"
-                )
+                col1, col2, col3 = st.columns([2, 6, 2])
+
+                with col1:
+                    st.write(f"**{source.get('source_type')}**")
+
+                with col2:
+                    st.write(source.get("source_value"))
+
+                with col3:
+                    if st.button("Delete", key=f"delete_source_{source.get('id')}"):
+                        with st.spinner("Deleting source..."):
+                            delete_response = requests.delete(
+                                f"{API_URL}/sources/{source.get('id')}", headers=get_headers())
+                        if delete_response.status_code == 200:
+                            st.success("Source deleted successfully.")
+                            st.rerun()
+                        else:
+                            st.error("Failed to delete source.")
+                            show_api_error(delete_response)
         else:
             st.info("No sources added yet.")
-
     else:
         st.warning("Could not load sources.")
         show_api_error(sources_response)
@@ -998,17 +1012,12 @@ with tab2:
 # ---------------------------------------------------------
 # TAB 3: FETCH + CURATE NOW
 # ---------------------------------------------------------
-with tab3:
-    st.header("Fetch + Curate Now")
-
-    st.write(
-        "This button runs the complete newsletter pipeline: "
-        "fetch stories, create embeddings, update your interest embedding, "
-        "and build your personalised digest."
-    )
+with tab3: 
+    st.header("Fetch + Curate Now") 
+    st.write( "This button runs the complete newsletter pipeline: " "fetch stories, create embeddings, update your interest embedding, " "and build your personalised digest." )
 
     if st.button("Fetch + Curate Now", key="run_curator_button"):
-        with st.spinner("Running curator pipeline..."):
+        with st.spinner("Running curator pipeline, fetching stories and preparing digests... This may take a few seconds"):
             response = run_curator()
 
         if response is not None and response.status_code == 200:
@@ -1050,20 +1059,36 @@ with tab3:
                     source_value = failed_source.get("source_value", "unknown")
                     error_message = failed_source.get("error", "")
 
-                    st.write(f"- **{source_type}** source `{source_value}` failed: {error_message}")
+                    st.write(
+                        f"- **{source_type}** source `{source_value}` failed: {error_message}"
+                    )
 
             story_count = digest_result.get("story_count", 0)
 
             if story_count:
-                st.success(f"Digest created successfully with {story_count} stories. "
-                           "Go to the Daily Digest tab to view it.")
+                st.success(
+                    f"Digest created successfully with {story_count} stories. "
+                    "Go to the Daily Digest tab to view it."
+                )
             else:
                 st.info("The curator completed, but no new digest stories were created this time.")
 
             with st.expander("View technical backend response"):
                 st.json(result)
 
+        else:
+            st.error("Curator pipeline failed.")
 
+            if response is None:
+                st.write("No response received from backend.")
+            else:
+                st.write("Status code:", response.status_code)
+                st.write("Response text:", response.text)
+
+                try:
+                    st.json(response.json())
+                except Exception:
+                    pass
 # ---------------------------------------------------------
 # TAB 4: DAILY DIGEST
 # ---------------------------------------------------------

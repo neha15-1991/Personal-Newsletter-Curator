@@ -6,6 +6,29 @@ from ranker import get_ranked_stories
 from summariser import summarise_story
 
 
+def create_fallback_summary(story: Story) -> dict:
+    """
+    Creates a simple fallback summary when the AI summariser fails.
+    This keeps the digest pipeline working even if Gemini/API fails.
+    """
+
+    content = story.content or ""
+    title = story.title or "Untitled story"
+
+    short_content = content.strip()
+
+    if len(short_content) > 250:
+        short_content = short_content[:250] + "..."
+
+    if not short_content:
+        short_content = "This story is relevant to the user's selected interests and saved sources."
+
+    return {
+        "summary": f"{title}. {short_content}",
+        "why_it_matters": "This story may be useful because it matches the user's saved interests and selected news sources."
+    }
+
+
 def build_digest_for_user(user: User, db: Session, top_k: int = 5) -> dict:
     """
     Builds and saves one personalised digest for a user.
@@ -13,13 +36,19 @@ def build_digest_for_user(user: User, db: Session, top_k: int = 5) -> dict:
     Steps:
     1. Read the user's topic tags.
     2. Get the most relevant stories.
-    3. Summarise each story using Groq.
-    4. Generate "why this matters to you".
+    3. Summarise each story using AI.
+    4. Generate 'why this matters to you'.
     5. Save the completed digest in SQLite.
+
+    Extra safety:
+    - If Chroma ranking gives no results, use recent stories from SQLite.
+    - If AI summarisation fails, create a fallback summary.
     """
 
     # Get all structured topic tags belonging to the user.
-    user_interests = db.query(Interest).filter(Interest.user_id == user.id).all()
+    user_interests = db.query(Interest).filter(
+        Interest.user_id == user.id
+    ).all()
 
     # Extract only the topic names.
     topic_names = [interest.topic for interest in user_interests]
@@ -28,13 +57,31 @@ def build_digest_for_user(user: User, db: Session, top_k: int = 5) -> dict:
     if not user.interest_text and not topic_names:
         raise ValueError("Please add your interests before building a digest")
 
-    # Get the stories that are most similar to the user's interest embedding.
-    ranked_stories = get_ranked_stories(user_id=user.id, top_k=top_k)
+    # Try to get ranked stories from ChromaDB.
+    ranked_stories = get_ranked_stories(
+        user_id=user.id,
+        top_k=top_k
+    )
+
+    # Fallback: if ChromaDB has no ranked stories, use recent stories from SQLite.
+    if not ranked_stories:
+        recent_stories = (
+            db.query(Story)
+            .order_by(Story.id.desc())
+            .limit(top_k)
+            .all()
+        )
+
+        ranked_stories = []
+
+        for story in recent_stories:
+            ranked_stories.append({
+                "story_id": story.id,
+                "similarity_score": 0.0
+            })
 
     if not ranked_stories:
-        raise ValueError(
-            "No ranked stories are available"
-        )
+        raise ValueError("No stories are available for digest creation")
 
     # Stores successfully processed digest cards.
     digest_items = []
@@ -44,8 +91,10 @@ def build_digest_for_user(user: User, db: Session, top_k: int = 5) -> dict:
 
     for ranked_story in ranked_stories:
 
-        # Load the complete story from SQLite using the story ID returned by ChromaDB.
-        story = db.query(Story).filter(Story.id == ranked_story["story_id"]).first()
+        # Load the complete story from SQLite using the story ID.
+        story = db.query(Story).filter(
+            Story.id == ranked_story["story_id"]
+        ).first()
 
         # Skip the result if the story no longer exists in SQLite.
         if story is None:
@@ -53,13 +102,10 @@ def build_digest_for_user(user: User, db: Session, top_k: int = 5) -> dict:
                 "story_id": ranked_story["story_id"],
                 "error": "Story not found in SQLite"
             })
-
             continue
 
         try:
-            # Ask Groq to create:
-            # 1. A two-sentence summary
-            # 2. A one-sentence personalised explanation
+            # Try AI summarisation first.
             generated_result = summarise_story(
                 title=story.title,
                 content=story.content,
@@ -67,41 +113,41 @@ def build_digest_for_user(user: User, db: Session, top_k: int = 5) -> dict:
                 topics=topic_names
             )
 
-            # Create one complete digest story card.
-            digest_items.append({
-                "story_id": story.id,
-                "title": story.title,
-                "url": story.url,
-                "source_type": story.source_type,
-                "source_name": story.source_name,
-                "published_at": story.published_at,
-                "engagement_score": story.engagement_score,
-                "comment_count": story.comment_count,
-                "similarity_score": ranked_story[
-                    "similarity_score"
-                ],
-                "summary": generated_result["summary"],
-                "why_it_matters": generated_result[
-                    "why_it_matters"
-                ]
-            })
-
         except Exception as error:
-            # One failed story should not stop the remaining stories.
+            # If AI summarisation fails, do not stop the pipeline.
+            # Use fallback summary instead.
             failed_stories.append({
                 "story_id": story.id,
                 "title": story.title,
-                "error": str(error)
+                "error": str(error),
+                "fallback_used": True
             })
 
-    # Stop if Groq failed for every selected story.
-    if not digest_items:
-        raise ValueError(
-            "The digest could not be created for any story"
-        )
+            generated_result = create_fallback_summary(story)
 
-    # Convert the Python list into a JSON string
-    # because digest_content is a Text database column.
+        # Create one complete digest story card.
+        digest_items.append({
+            "story_id": story.id,
+            "title": story.title,
+            "url": story.url,
+            "source_type": story.source_type,
+            "source_name": story.source_name,
+            "published_at": story.published_at,
+            "engagement_score": story.engagement_score,
+            "comment_count": story.comment_count,
+            "similarity_score": ranked_story.get("similarity_score", 0.0),
+            "summary": generated_result.get("summary", "Summary not available."),
+            "why_it_matters": generated_result.get(
+                "why_it_matters",
+                "This story is relevant to the user's saved interests."
+            )
+        })
+
+    # If still no digest items, then there are really no usable stories.
+    if not digest_items:
+        raise ValueError("The digest could not be created because no usable stories were found")
+
+    # Convert the Python list into a JSON string because digest_content is a Text database column.
     digest_json = json.dumps(
         digest_items,
         ensure_ascii=False
