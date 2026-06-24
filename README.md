@@ -283,23 +283,29 @@ capstone-project/
 
 Example `.env` file:
 
+## Environment Variables
+
+Create a `.env` file in the project root or configure these values in the deployment platform.
+
+Required backend variables:
+
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
+GEMINI_MODEL_NAME=gemini-2.5-flash
 JWT_SECRET=your_jwt_secret_here
-
-GMAIL_EMAIL=your_email@gmail.com
-GMAIL_APP_PASSWORD=your_gmail_app_password_here
-
-REDDIT_CLIENT_ID=optional_reddit_client_id
-REDDIT_CLIENT_SECRET=optional_reddit_client_secret
-REDDIT_USER_AGENT=personal_newsletter_curator
 ```
 
-# ⚠️⚠️ Important
+Required frontend deployment variable:
 
-Do not upload your real `.env` file to GitHub because it contains private API keys and passwords.
+```env
+API_URL=https://your-backend-service.onrender.com
+```
 
-Instead, upload only `.env.example` with sample placeholder values.
+`API_URL` is used by the Streamlit frontend to connect with the deployed FastAPI backend.
+
+Note: Gmail email sending and Reddit API authentication are not required in the current deployed version of this project.
+
+
 
 
 # 🚀How to Run the Project
@@ -416,7 +422,7 @@ Click **Save Interests**.
 
 ### Step 3: Add Sources
 
-Go to the **Sources** tab.
+Go to the **Sources** tab. For the deployed demo, have used Hacker News sources, because they do not require API credentials.
 
 Example Hacker News sources:
 
@@ -434,6 +440,12 @@ source_value: ai
 source_type: hn
 source_value: startups
 ```
+```
+You can also add RSS sources if using a valid RSS feed URL:
+
+source_type: rss
+source_value: https://example.com/feed
+```
 
 Reddit source example:
 
@@ -442,7 +454,7 @@ source_type: reddit
 source_value: Python
 ```
 
-Note: Reddit requires Reddit API credentials in the `.env` file.
+Reddit was included as part of the planned multi-source design, but Reddit API credentials are not configured in the current deployed demo. Therefore, for evaluation/testing, please use Hacker News or RSS sources.
 
 ---
 
