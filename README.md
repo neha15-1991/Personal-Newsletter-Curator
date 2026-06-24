@@ -235,37 +235,32 @@ capstone-project/
 ├── README.md
 └── .gitignore
 ```
-
-# 🛢️🗄️Database Schema
+# 🛢️🗄️ Database Schema
 
 The database schema is defined using SQLAlchemy ORM in:
 
-```text
-Backend/models.py
-| Table        | Purpose                                                        |
-| ------------ | -------------------------------------------------------------- |
-| users        | Stores user account details and free-text interest description |
-| interests    | Stores topic tags selected by each user                        |
-| sources      | Stores RSS, Reddit, and Hacker News sources                    |
-| stories      | Stores fetched stories from external sources                   |
-| digests      | Stores generated digest records                                |
-| digest_items | Stores stories included in each digest                         |
-| clicks       | Stores user click history                                      |
-```
+`Backend/models.py`
+
+| Table | Purpose |
+| --- | --- |
+| users | Stores user account details and free-text interest description |
+| interests | Stores topic tags selected by each user |
+| sources | Stores RSS, Reddit, and Hacker News sources |
+| stories | Stores fetched stories from external sources |
+| digests | Stores generated digest records |
+| digest_items | Stores stories included in each digest |
+| clicks | Stores user click history |
+
 ## Storage
-```
+
 This project uses two types of storage:
 
-| Storage  | Purpose                                                                      |
-| -------- | ---------------------------------------------------------------------------- |
-| SQLite   | Stores users, interests, sources, stories, digests, digest items, and clicks |
-| ChromaDB | Stores vector embeddings for user interests and stories                      |
+| Storage | Purpose |
+| --- | --- |
+| SQLite | Stores users, interests, sources, stories, digests, digest items, and clicks |
+| ChromaDB | Stores vector embeddings for user interests and stories |
 
-ChromaDB creates local vector storage during development. The generated ChromaDB folder is not uploaded to GitHub because it can be recreated when embeddings are generated.
-
-```
-
-## 🔐Environment Variables
+## 🔐 Environment Variables
 
 Create a `.env` file in the main project folder.
 
@@ -283,29 +278,25 @@ capstone-project/
 
 Example `.env` file:
 
-## Environment Variables
-
-Create a `.env` file in the project root or configure these values in the deployment platform.
-
-Required backend variables:
-
 ```env
 GEMINI_API_KEY=your_gemini_api_key_here
 GEMINI_MODEL_NAME=gemini-2.5-flash
 JWT_SECRET=your_jwt_secret_here
 ```
 
-Required frontend deployment variable:
+For local frontend development, no extra frontend variable is required because the Streamlit app uses this default backend URL:
+
+```env
+API_URL=http://localhost:8000
+```
+
+For deployment, set `API_URL` to the deployed FastAPI backend URL, for example:
 
 ```env
 API_URL=https://your-backend-service.onrender.com
 ```
 
-`API_URL` is used by the Streamlit frontend to connect with the deployed FastAPI backend.
-
-Note: Gmail email sending and Reddit API authentication are not required in the current deployed version of this project.
-
-
+`API_URL` is used by the Streamlit frontend to connect with the FastAPI backend.
 
 
 # 🚀How to Run the Project
@@ -422,7 +413,7 @@ Click **Save Interests**.
 
 ### Step 3: Add Sources
 
-Go to the **Sources** tab. For the deployed demo, have used Hacker News sources, because they do not require API credentials.
+Go to the **Sources** tab. For the deployed demo, have used Hacker News sources and rss, because they do not require API credentials.
 
 Example Hacker News sources:
 
@@ -441,10 +432,9 @@ source_type: hn
 source_value: startups
 ```
 ```
-You can also add RSS sources if using a valid RSS feed URL:
 
 source_type: rss
-source_value: https://example.com/feed
+source_value: https://www.renewableenergyworld.com/feed/
 ```
 
 Reddit source example:
@@ -454,7 +444,7 @@ source_type: reddit
 source_value: Python
 ```
 
-Reddit was included as part of the planned multi-source design, but Reddit API credentials are not configured in the current deployed demo. Therefore, for evaluation/testing, please use Hacker News or RSS sources.
+Reddit was included as part of the planned multi-source design, but Reddit API credentials are not configured in the current deployed demo. Therefore, for evaluation/testing, Hacker News or RSS sources are recommended.
 
 ---
 
@@ -558,6 +548,14 @@ Login
 → Logout
 ```
 
+```markdown
+## Demo Note
+
+The project video was recorded using the local FastAPI backend and Streamlit frontend, exposed temporarily through Cloudflared.
+
+The Cloudflared URL is temporary and works only while the local backend, frontend, and tunnel are running.
+
+For final review, please use this GitHub repository and the local setup instructions above.
 ---
 
 ## Current Status
@@ -603,7 +601,6 @@ Possible future improvements:
 
 * Add email delivery for daily digest
 * Add scheduler status page to show last automatic run time
-* Add delete source option
 * Add edit interests option
 * Add better filtering by topic
 * Add search inside digest history

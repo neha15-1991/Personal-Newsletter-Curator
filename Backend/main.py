@@ -6,13 +6,13 @@ from schema import UserCreate, UserLogin, InterestEditor, SourceCreate
 from auth import hash_password, create_access_token, verify_password, verify_access_token
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 import json
-#from fetcher import fetch_rss_stories, fetch_hn_stories, fetch_reddit_stories
-#from embedder import create_embedding, create_story_text, create_user_interest_text,store_story_embedding, store_user_interest_embedding
-#from ranker import get_ranked_stories
-#from digest_builder import build_digest_for_user
-#from pipeline import run_curator_for_user
-#from scheduler import start_scheduler, stop_scheduler, run_daily_curator_job
-
+from scheduler import run_daily_curator_job
+from pipeline import run_curator_for_user
+from fetcher import fetch_rss_stories, fetch_hn_stories, fetch_reddit_stories
+from embedder import create_embedding, create_story_text, create_user_interest_text, store_story_embedding, store_user_interest_embedding
+from ranker import get_ranked_stories
+from digest_builder import build_digest_for_user
+from scheduler import start_scheduler, stop_scheduler, run_daily_curator_job
 
 # creates the fastapi application.
 app=FastAPI(title="Personal Newsletter Curator API") 
@@ -404,8 +404,6 @@ def fetch_stories_now(current_user: User = Depends(get_current_user), db: Sessio
     3. Check whether each story URL already exists.
     4. Save only newly ingested stories.
     """
-    from fetcher import fetch_rss_stories, fetch_hn_stories, fetch_reddit_stories
-
     # Get all RSS, Reddit, and Hacker News sources belonging to the logged-in user.
     user_sources = db.query(Source).filter(Source.user_id == current_user.id).all()
 
@@ -547,7 +545,7 @@ def embed_new_stories(current_user: User = Depends(get_current_user), db: Sessio
     A story needs embedding when:
     embedded == False
     """
-    from embedder import create_embedding, create_story_text, create_user_interest_text, store_story_embedding, store_user_interest_embedding
+    
     # Fetch only newly ingested stories.
     new_stories = db.query(Story).filter(Story.embedded == False).all()
 
@@ -612,7 +610,7 @@ def embed_user_interests(current_user: User = Depends(get_current_user), db: Ses
     1. Free-text interest description
     2. Structured topic tags
     """
-    from embedder import create_embedding, create_story_text, create_user_interest_text,store_story_embedding, store_user_interest_embedding
+    
 
     # Get all topic tags belonging to the current user.
     user_interests = db.query(Interest).filter(Interest.user_id == current_user.id).all()
@@ -661,7 +659,7 @@ def get_recommended_stories(current_user: User = Depends(get_current_user), db: 
     3. Get the most relevant story IDs.
     4. Load complete story information from SQLite.
     """
-    from ranker import get_ranked_stories
+    
     try:
         # Get up to five stories whose embeddings are closest to the current user's interest embedding.
         ranked_results = get_ranked_stories( user_id=current_user.id, top_k=5)
@@ -869,15 +867,12 @@ def run_curator(
 @app.on_event("startup")
 def startup_event():
     create_tables()
-    # Scheduler is disabled on Render startup so the API can open its port quickly.
-    # APScheduler code is still available and can be triggered manually.
-    pass
+    start_scheduler()
 
 
 @app.on_event("shutdown")
 def shutdown_event():
-    # Scheduler is not started automatically on Render, so nothing to stop here.
-    pass
+    stop_scheduler()
 
 
 @app.post("/run-scheduler-now")
@@ -886,6 +881,7 @@ def run_scheduler_now():
     Manually runs the same job that APScheduler
     would run automatically every day.
     """
-    from scheduler import run_daily_curator_job
-
     return run_daily_curator_job()
+    
+
+    
