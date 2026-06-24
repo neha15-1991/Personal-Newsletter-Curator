@@ -12,7 +12,6 @@ praw
 python-dotenv
 chromadb
 sentence-transformers
-groq
 google-genai
 streamlit 
 apscheduler
