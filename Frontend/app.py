@@ -410,7 +410,7 @@ def signup_user(name, email, password):
                 "email": email,
                 "password": password
             },
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not connect to backend signup endpoint.")
@@ -426,7 +426,7 @@ def login_user(email, password):
                 "email": email,
                 "password": password
             },
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not connect to backend login endpoint.")
@@ -439,7 +439,7 @@ def get_current_user():
         return requests.get(
             f"{API_URL}/me",
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not get current user.")
@@ -456,7 +456,7 @@ def update_interests(interest_text, topics):
                 "topics": topics
             },
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not save interests.")
@@ -469,7 +469,7 @@ def embed_interests():
         return requests.post(
             f"{API_URL}/embed-interests",
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not update interest embedding.")
@@ -486,7 +486,7 @@ def add_source(source_type, source_value):
                 "source_value": source_value
             },
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not add source.")
@@ -499,7 +499,7 @@ def get_sources():
         return requests.get(
             f"{API_URL}/sources",
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not load sources.")
@@ -512,7 +512,7 @@ def run_curator():
         return requests.post(
             f"{API_URL}/run-curator",
             headers=get_headers(),
-            timeout=120
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not run curator pipeline.")
@@ -525,7 +525,7 @@ def get_all_digests():
         return requests.get(
             f"{API_URL}/digests",
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not load digests.")
@@ -538,7 +538,7 @@ def record_click(story_id):
         return requests.post(
             f"{API_URL}/clicks/{story_id}",
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not record click.")
@@ -551,7 +551,7 @@ def get_clicks():
         return requests.get(
             f"{API_URL}/clicks",
             headers=get_headers(),
-            timeout=60
+            timeout=180
         )
     except requests.exceptions.RequestException as error:
         st.error("Could not load click history.")
