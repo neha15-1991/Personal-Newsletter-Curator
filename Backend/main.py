@@ -5,11 +5,11 @@ from sqlalchemy.orm import Session
 from schema import UserCreate, UserLogin, InterestEditor, SourceCreate
 from auth import hash_password, create_access_token, verify_password, verify_access_token
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from fetcher import fetch_rss_stories, fetch_hn_stories, fetch_reddit_stories
+import json
+#from fetcher import fetch_rss_stories, fetch_hn_stories, fetch_reddit_stories
 #from embedder import create_embedding, create_story_text, create_user_interest_text,store_story_embedding, store_user_interest_embedding
 #from ranker import get_ranked_stories
-from digest_builder import build_digest_for_user
-import json
+#from digest_builder import build_digest_for_user
 #from pipeline import run_curator_for_user
 #from scheduler import start_scheduler, stop_scheduler, run_daily_curator_job
 
@@ -719,6 +719,7 @@ def build_digest(current_user: User = Depends(get_current_user), db: Session = D
     3. Why this matters explanation
     4. Digest saving in SQLite
     """
+    from digest_builder import build_digest_for_user
 
     try:
         return build_digest_for_user(
