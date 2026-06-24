@@ -9,7 +9,8 @@ import os
 # ---------------------------------------------------------
 # Locally it will use localhost.
 # On Render, it will use API_URL from Environment Variables.
-API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
+#API_URL = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
+API_URL = "https://newsletter-curator-backend.onrender.com"
 
 
 # ---------------------------------------------------------
